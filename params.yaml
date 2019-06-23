@@ -8,3 +8,7 @@ MAXGAIN: 100.0
 FOREVER: 1000
 PWM_FREQ: 50 # PWM Frequency in Hertz
 MAX_DC: 90.0 # max duty cycle
+Obstruction_Tolerance: 20.00 # in cm
+Backup_Time: 0.5 # in seconds
+Backup_Speed:  15
+Obstruction_Type: ['LEFT', 'STRAIGHT', 'RIGHT']
