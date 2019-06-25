@@ -15,8 +15,6 @@ class motor(object):
     from yaml import load, Loader
     # intitalisse parameters
     self.params = load(open('params.yaml').read(), Loader=Loader)
-
-
     GPIO.setmode(GPIO.BCM)
 
     #gpiopins is a list of pins in this order:
@@ -40,11 +38,11 @@ class motor(object):
     GPIO.output(self.stdby,level)
     pass
 
-  def move(self, speed , direction = True): #True for forward, False for backwards
+  def move(self, gain , direction = True): #True for forward, False for backwards
   #simple move command
     self.standby()
-    self.PWM.start(min(speed,self.params['MAXGAIN']))
-    print('speed: ',speed,'direction: ',direction)
+    self.PWM.start(min(gain,self.params['MAXGAIN']))
+    #print('gain: ',gain,'direction: ',direction)
     if direction :
         GPIO.output((self.In1,self.In2),(GPIO.HIGH,GPIO.LOW))
     else:
@@ -52,18 +50,18 @@ class motor(object):
     #GPIO.output((self.In1,self.In2),(direction,not direction))
     pass
 
-  def forward(self,speed, direction=True):
+  def forward(self,gain, direction=True):
   #moves the motor forward
     self.standby()
-    self.PWM.start(speed) #duty cycle = speed
+    self.PWM.start(gain) #duty cycle = gain
     print('moving forward - direction:',direction)
     GPIO.output((self.In1,self.In2),(direction,not direction))
     pass
 
-  def back(self,speed):
+  def back(self,gain):
   # moves the motor backwards
     self.standby()
-    self.PWM.start(speed) #duty cycle = speed
+    self.PWM.start(gain) #duty cycle = gain
     print ('moving back')
     GPIO.output((self.In1,self.In2),(GPIO.LOW,GPIO.HIGH))
     pass
@@ -83,10 +81,10 @@ class motor(object):
     pass
 
 
-def timed_move(motorList,speed,direction,runTime):
+def timed_move(motorList,gain,direction,runTime):
 #move a list of motors for fixed time in seconds
   for m in motorList:
-     m.move(speed,direction) # move motors forward
+     m.move(gain,direction) # move motors forward
   start_time = time.time()
   end_time = start_time
   if runTime != m.params['FOREVER']:
@@ -105,18 +103,18 @@ def main():
   rightMotorPins.append(StdByPin)
   l = motor(leftMotorPins)
   r = motor(rightMotorPins)
-  speed = l.params['MAXGAIN']*0.5
-  l.back(speed)
+  gain = l.params['MAXGAIN']*0.5
+  l.back(gain)
   time.sleep(3)
   print('left moved forward')
   l.stop()
-  r.back(speed)
+  r.back(gain)
   time.sleep(1)
   r.stop()
   time.sleep(3)
   print('right moved forward')
 
-  for m in (l,r): m.forward(speed)
+  for m in (l,r): m.forward(gain)
   time.sleep(2)
   for m in (l,r): m.stop()
   GPIO.cleanup()

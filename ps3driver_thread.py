@@ -22,31 +22,21 @@ class sense(threading.Thread):
   def run(self):
     global PiOde
     while True:
-      if PiOde.roaming:
-        print ('sensing')
         print ('sensor values are: ', PiOde.readings)
         with lock:
           PiOde.sense()
         time.sleep(1)
-      else:
-        print ('not sensing')
     pass
 
-class roam(threading.Thread):
+class drive(threading.Thread):
   def __init__(self):
     threading.Thread.__init__(self)
     pass
 
   def run(self):
     global PiOde
-    while True:
-     with lock:
-      if PiOde.is_roaming():
-        print ('roaming')
-        PiOde.roam()
-      else:
-        PiOde.stop()
-        print ('stopped')
+    with lock:
+        PiOde.ps3drive()
 
 
 def signal_handler(signum, frame):
@@ -99,10 +89,10 @@ lock = threading.RLock()
 
 def main():
   s = sense()
-  r = roam()
+  d = drive()
   time.sleep(1)
   s.start()
-  r.start()
+  d.start()
 
 if __name__ == "__main__":
     main()

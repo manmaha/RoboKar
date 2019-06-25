@@ -7,11 +7,13 @@ import time
 import sensors
 import motors
 import numpy as np
-from yaml import load, loader
+from yaml import load, Loader
 import signal
 import sys
 import threading
 from sys import argv
+from approxeng.input.selectbinder import ControllerResource
+from approxeng.input.dualshock3 import DualShock3
 
 
 # Robot is an object comprising of a list of sensors and actuators
@@ -37,6 +39,9 @@ class robot(object):
   def toggle_roaming(self):
     self.roaming = not self.roaming
 
+  def is_roaming(self):
+     return self.roaming
+
   #motion methods
   def stop(self):
     for m in self.motors:
@@ -48,14 +53,14 @@ class robot(object):
   def move_straight(self,speed,direction, runTime):
     self.stopped = False
     motors.timed_move(self.motors,speed,direction,runTime)
-    if runTime != motors.FOREVER:
+    if runTime != self.params['FOREVER']:
       self.stopped = True
     pass
 
   def move_back(self,speed,direction,runTime):
     self.stopped = False
     motors.timed_move(self.motors,speed,False,runTime)
-    if runTime != motors.FOREVER:
+    if runTime != self.params['FOREVER']:
       self.stopped = True
     pass
 
@@ -90,22 +95,32 @@ class RobotOne(robot): # simple 2 wheeled robot
     #Calculate Max Left and Right motor speeds
     U_l_max = self.params['MAXGAIN']/self.params['left_ratio']
     U_r_max = self.params['MAXGAIN']/self.params['right_ratio']
-    self.lin_vel_max = self.params['R']/2*(U_l_max+U_r_max)
-    self.ang_vel_max = self.params['R']/self.params['L']*(U_l_max-U_r_max)
+    self.lin_vel_max = self.params['R']*(U_l_max+U_r_max)/2*100
+    self.ang_vel_max = self.params['R']/self.params['L']*(U_l_max+U_r_max)
+    #print self.lin_vel_max
+    #print self.ang_vel_max
     pass
 
-  def command_vel(self,(v,w),runTime):
-   # input is a linear velocity and angular velocity tuple
+  def command_vel(self,velocity,runTime):
+   # input is a linear velocity and angular velocity list
+   # linear velocity in cm/s and angular velocity in rad/s
    # moves the motors by left_gain and right_gain
-
-   #constrain velocities
-   lin_vel = np.sign(v)*min(self.lin_vel_max,abs(v))
+   v,w = velocity[0],velocity[1]
+   print('v: ', v, 'w: ', w)
+   #constrain velocities and convert to m/s
+   lin_vel = np.sign(v)*min(self.lin_vel_max,abs(v/100.0))
    ang_vel = np.sign(w)*min(self.ang_vel_max,abs(w))
 
    #unicycle Model
-   left_gain = self.params['left_ratio']*(lin_vel-ang_vel*self.params['L']/2)/self.params['R']
+   left_gain = self.params['left_ratio']*(lin_vel-ang_vel*self.params['L']/2)/self.params['R']/self.params['calib_factor']
+   left_gain=min(left_gain,self.params['MAXGAIN'])
    left_direction = left_gain > 0
-   right_gain = self.params['right_ratio']*(lin_vel+ang_vel*self.params['L']/2)/self.params['R']
+   right_gain = self.params['right_ratio']*(lin_vel+ang_vel*self.params['L']/2)/self.params['R']/self.params['calib_factor']
+   right_gain=min(right_gain,self.params['MAXGAIN'])
+
+   print('left_gain',left_gain,'right_gain',right_gain )
+   #input('take a pause')
+
    right_direction = right_gain > 0
    #move command
    self.leftMotor.move(abs(left_gain),left_direction)
@@ -126,7 +141,7 @@ class RobotOne(robot): # simple 2 wheeled robot
     self.stopped = False
     self.leftMotor.stop()
     self.rightMotor.forward(speed,direction)
-    if runTime != motors.FOREVER:
+    if runTime != self.params['FOREVER']:
       start_time = time.time()
       end_time = start_time
       while end_time - start_time < runTime:
@@ -143,7 +158,7 @@ class RobotOne(robot): # simple 2 wheeled robot
     self.stopped = False
     self.rightMotor.stop()
     self.leftMotor.forward(speed,direction)
-    if runTime != motors.FOREVER:
+    if runTime != self.params['FOREVER']:
       start_time = time.time()
       end_time = start_time
       while end_time - start_time < runTime:
@@ -170,13 +185,13 @@ class RobotOne(robot): # simple 2 wheeled robot
   def obstruction(self):
   # returns, False for no obstruction, 'LEFT','FORWARD','RIGHT' for left, forward and right
     self.sense()
-    print 'sensor values are : ', self.readings
+    print ('sensor values are : ', self.readings)
     if min(self.readings) > self.params['Obstruction_Tolerance']:
       print ('no obstruction found')
       return False
     else:
-      print ('obstruction type', Obstruction_Type[self.readings.index(min(self.readings))])
-      return Obstruction_Type[self.readings.index(min(self.readings))]
+      print ('obstruction type', self.params['Obstruction_Type'][self.readings.index(min(self.readings))])
+      return self.params['Obstruction_Type'][self.readings.index(min(self.readings))]
     pass
 
   def back_up(self, obstruction_type):
@@ -195,26 +210,36 @@ class RobotOne(robot): # simple 2 wheeled robot
   def roam(self):
   # robot roams and avoids obstacles
     self.back_up(self.obstruction())
-    self.move_straight(self.params['MAXGAIN']*0.4,True,1.5)
+    self.command_vel([self.params['roam_vel'],0],self.params['roam_time'])
+
+  def ps3drive(self):
+  # robot drives with a PS3 Controller
+    while True:
+            try:
+                with ControllerResource() as joystick:
+                    print('Found a joystick and connected')
+                    while joystick.connected:
+                        # Get a corrected value for the left stick x-axis
+                        w = joystick['lx']*self.params['angular_vel_controller_calib']
+                        v = joystick.ly*self.params['linear_vel_controller_calib']
+                        self.command_vel([v,w],0.50)#params['FOREVER'])
+                        print (v,w)
+                # Joystick disconnected...
+                print('Connection to joystick lost')
+            except IOError:
+                # No joystick found, wait for a bit before trying again
+                print('Unable to find any joysticks')
+                time.sleep(1.0)
 
   def test(self):
  # tests the Robot
-     print 'Start Testing'
+     print ('Start Testing')
      time.sleep(1)
      self.sense()
-     print self.sensor_readings()
-     time.sleep(1)
-     self.command_vel((0,3.14),5)
-     time.sleep(1)
-     self.command_vel((0,-3.14),5)
-     time.sleep(1)
-     self.command_vel((10,0),5)
-     time.sleep(1)
-     self.command_vel((-10,0),5)
-     time.sleep(1)
-     self.command_vel((10,3.14),5)
+     print ('sensor_readings: ',self.sensor_readings())
+     self.command_vel([20,0],2)
      self.stop()
-     print 'Finished Testing'
+     print ('Finished Testing')
 
 
 
@@ -228,6 +253,10 @@ def signal_handler(signum, frame):
         print('You pressed Ctrl+C!')
         GPIO.cleanup()
         sys.exit(0)
+
+def button_handler(pin):
+	global PiOde
+	PiOde.toggle_roaming()
 
 
 def main():
@@ -258,9 +287,20 @@ def main():
     #set up Ctrl C interrupt
     signal.signal(signal.SIGINT, signal_handler)
 
-    # Test the Robot
-    PiOde.test()
+    #button pins
+    button_pin = 18
+    GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
+    #set up button handling
+    #GPIO.add_event_detect(button_pin, GPIO.RISING,callback=lambda x: PiOde.toggle_roaming(), bouncetime = 200)
+    #GPIO.add_event_callback(button_pin, button_handler)
+
+
+    # Test the Robot
+    #PiOde.set_roaming_on()
+    #while PiOde.is_roaming():
+    #    PiOde.roam()
+    PiOde.command_vel([0,3.14],100)
 
 
 

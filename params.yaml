@@ -3,8 +3,9 @@ L: 0.13
 max_omega: 6.28318
 max_vel: 1.0
 left_ratio: 230.0
-right_ratio: 210.0
-MAXGAIN: 100.0
+right_ratio: 200.0
+calib_factor: 1
+MAXGAIN: 90.0
 FOREVER: 1000
 PWM_FREQ: 50 # PWM Frequency in Hertz
 MAX_DC: 90.0 # max duty cycle
@@ -12,3 +13,7 @@ Obstruction_Tolerance: 20.00 # in cm
 Backup_Time: 0.5 # in seconds
 Backup_Speed:  15
 Obstruction_Type: ['LEFT', 'STRAIGHT', 'RIGHT']
+roam_vel: 20 # roaming velocity in cm/s
+roam_time: 1.5 # moving time per roaming cycle (seconds)
+linear_vel_controller_calib: .950
+angular_vel_controller_calib: -0.07
