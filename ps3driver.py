@@ -1,8 +1,6 @@
+#!/usr/bin/env python3
 import sys
 import time
-#sys.path.append('/usr/local/lib/python2.7/dist-packages')
-from approxeng.input.selectbinder import ControllerResource
-from approxeng.input.dualshock3 import DualShock3
 import RPi.GPIO as GPIO
 import robots
 import sensors
@@ -11,48 +9,69 @@ import numpy as np
 from yaml import load, Loader
 import signal
 from sys import argv
-import robots
+import socket
+import random
+import threading
+from approxeng.input.selectbinder import ControllerResource
+from approxeng.input.dualshock3 import DualShock3
+
+
+def ps3drive(robot):
+    while True:
+            try:
+                with ControllerResource() as joystick:
+                    print('Found a joystick and connected')
+                    while joystick.connected:
+                        # Get a corrected value for the left stick x-axis
+                        w = joystick['lx']*robot.params['angular_vel_controller_calib']
+                        v = joystick.ly*robot.params['linear_vel_controller_calib']
+                        self.command_vel([v,w])
+                        print (v,w)
+                # Joystick disconnected...
+                print('Connection to joystick lost')
+            except IOError:
+                # No joystick found, wait for a bit before trying again
+                print('Unable to find any joysticks')
+                time.sleep(1.0)
+
+def signal_handler(signum, frame):
+        print('You pressed Ctrl+C!')
+        GPIO.cleanup()
+        sys.exit(0)
 
 
 def main():
     #test and drive the the Robot with PS3 Controller
-    #motor GPIO Pins
+    #set up Ctrl C interrupt
+    signal.signal(signal.SIGINT, signal_handler)
+
+    #Initialise the Board
+    params = load(open('params.yaml').read(), Loader=Loader)
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
-    StdByPin = 22  # this is the common pin
-    leftMotorPins = [12,23,24] # fill up with GPIO pins, PWMA, AIn1, AIn2
-    rightMotorPins = [13,25,5] # same as above
+
+    StdByPin = params['StdByPin']  # this is the common pin
+    leftMotorPins = params['leftMotorPins'] # fill up with GPIO pins, PWMA, AIn1, AIn2
+    rightMotorPins = params['rightMotorPins'] # same as above
     leftMotorPins.append(StdByPin)
     rightMotorPins.append(StdByPin)
-
-    #Sensor GPIO Pins
-    trig = 19    # common trig pin
-    echo_left = 17 #left sensor echo pin
-    echo_fwd = 4 #forward sensor echo pin
-    echo_right = 16   #right sensor echo pin
-
-
     #set up motors and sensors
     Motors = [motors.motor(leftMotorPins,'Left'),motors.motor(rightMotorPins,'Right')]
-    Sensors = [sensors.ultrasonic_sensor([trig,echo_left]), sensors.ultrasonic_sensor([trig,echo_fwd]), sensors.ultrasonic_sensor([trig,echo_right])]
+    Sensors = [sensors.ultrasonic_sensor([params['trig'],params['echo_left']]), sensors.ultrasonic_sensor([params['trig'],params['echo_fwd']]), sensors.ultrasonic_sensor([params['trig'],params['echo_right']])]
 
     #set up robot
     PiOde = robots.RobotOne(Motors,Sensors)
+    PiOde.test()
 
-    #set up Ctrl C interrupt
-    signal.signal(signal.SIGINT, robots.signal_handler)
-
-    #button pins
-    button_pin = 18
+    #Buttons
+    button_pin = params['button_pin']
     GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     #set up button handling
     #GPIO.add_event_detect(button_pin, GPIO.RISING,callback=lambda x: PiOde.toggle_roaming(), bouncetime = 200)
     #GPIO.add_event_callback(button_pin, button_handler)
 
-    PiOde.ps3drive()
-
-
+    ps3drive(PiOde)
 
 if __name__ == "__main__":
     main()

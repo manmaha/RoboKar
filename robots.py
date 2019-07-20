@@ -1,6 +1,6 @@
 # Robot Class and methods
 # Manish Mahajan
-#23 June 2019
+#21 July 2019
 
 import RPi.GPIO as GPIO
 import time
@@ -12,8 +12,6 @@ import signal
 import sys
 import threading
 from sys import argv
-from approxeng.input.selectbinder import ControllerResource
-from approxeng.input.dualshock3 import DualShock3
 
 
 # Robot is an object comprising of a list of sensors and actuators
@@ -101,7 +99,7 @@ class RobotOne(robot): # simple 2 wheeled robot
     #print self.ang_vel_max
     pass
 
-  def command_vel(self,velocity,runTime):
+  def command_vel(self,velocity):
    # input is a linear velocity and angular velocity list
    # linear velocity in cm/s and angular velocity in rad/s
    # moves the motors by left_gain and right_gain
@@ -125,13 +123,6 @@ class RobotOne(robot): # simple 2 wheeled robot
    #move command
    self.leftMotor.move(abs(left_gain),left_direction)
    self.rightMotor.move(abs(right_gain),right_direction)
-
-   if runTime != self.params['FOREVER']:
-    start_time = time.time()
-    end_time = start_time
-    while end_time - start_time < runTime:
-        end_time = time.time()
-    self.stop()
 
    pass
 
@@ -212,32 +203,13 @@ class RobotOne(robot): # simple 2 wheeled robot
     self.back_up(self.obstruction())
     self.command_vel([self.params['roam_vel'],0],self.params['roam_time'])
 
-  def ps3drive(self):
-  # robot drives with a PS3 Controller
-    while True:
-            try:
-                with ControllerResource() as joystick:
-                    print('Found a joystick and connected')
-                    while joystick.connected:
-                        # Get a corrected value for the left stick x-axis
-                        w = joystick['lx']*self.params['angular_vel_controller_calib']
-                        v = joystick.ly*self.params['linear_vel_controller_calib']
-                        self.command_vel([v,w],0.50)#params['FOREVER'])
-                        print (v,w)
-                # Joystick disconnected...
-                print('Connection to joystick lost')
-            except IOError:
-                # No joystick found, wait for a bit before trying again
-                print('Unable to find any joysticks')
-                time.sleep(1.0)
-
   def test(self):
  # tests the Robot
      print ('Start Testing')
      time.sleep(1)
      self.sense()
      print ('sensor_readings: ',self.sensor_readings())
-     self.command_vel([20,0],2)
+     self.command_vel([20,0])
      self.stop()
      print ('Finished Testing')
 
@@ -300,7 +272,7 @@ def main():
     #PiOde.set_roaming_on()
     #while PiOde.is_roaming():
     #    PiOde.roam()
-    PiOde.command_vel([0,3.14],100)
+    PiOde.command_vel([0,3.14])
 
 
 

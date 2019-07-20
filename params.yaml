@@ -1,3 +1,15 @@
+#Motor GPIO Pins
+StdByPin: 22  # this is the common pin
+leftMotorPins: [12,23,24] # fill up with GPIO pins, PWMA, AIn1, AIn2
+rightMotorPins: [13,25,5] # same as above
+#Sensor GPIO Pins
+trig: 19    # common trig pin
+echo_left: 17 #left sensor echo pin
+echo_fwd: 4 #forward sensor echo pin
+echo_right: 16   #right sensor echo pin
+#button pins
+button_pin: 18
+
 R: 0.032
 L: 0.13
 max_omega: 6.28318
