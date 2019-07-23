@@ -1,6 +1,9 @@
-# Robot Threading Routines
+#!/usr/bin/env python3
+# Robot Set Up and Driver Routines
+# For  Commands (v,W) recd through an incoming socket
 # Manish Mahajan
-#23 Oct 2017
+#23 July 2019
+
 
 import RPi.GPIO as GPIO
 import time

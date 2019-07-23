@@ -206,10 +206,17 @@ class RobotOne(robot): # simple 2 wheeled robot
   def test(self):
  # tests the Robot
      print ('Start Testing')
-     time.sleep(1)
+
      self.sense()
      print ('sensor_readings: ',self.sensor_readings())
-     self.command_vel([20,0])
+     self.command_vel([10,0])
+     time.sleep(3)
+     self.stop()
+     self.command_vel([-10,0])
+     time.sleep(3)
+     self.stop()
+     self.command_vel([0,6])
+     time.sleep(3)
      self.stop()
      print ('Finished Testing')
 
