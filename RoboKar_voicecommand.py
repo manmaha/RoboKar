@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Manish Mahajan 23 July 2019
 # RoboKar voice commander using Google CloudSpeechClient
+# Runs on Google AIY Kit
 # options --language --hostname RoboKar --port
 
 """Voice Commander for the RoboKar"""

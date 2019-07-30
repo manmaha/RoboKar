@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1>RoboKar Web Browser Control</h1>
+<h2>Linear and Angular Velocity Control</h2>
+
+<p>Drag the slider(s) to display the current value.</p>
+
+<div id="slidecontainer">
+  <p>Linear Velocity: <span id="v_value"></span></p>
+  <input type="range" min="-5.0" max="5.0" value="0.0" step ="0.1" id="linear">
+  <p>Angular Velocity: <span id="w_value"></span></p>
+  <input type="range" min="-5.0" max="5.0" value="0.0" step ="0.1" id="angular">
+</div>
+  <p></p>
+  <input type="button" value='STOP ROBOT' id="stop_button">
+
+<script>
+
+
+
+var v = document.getElementById("linear");
+var w = document.getElementById("angular");
+var v_output = document.getElementById("v_value");
+var w_output = document.getElementById("w_value");
+var stop_button = document.getElementById("stop_button");
+v_output.innerHTML = v.value;
+w_output.innerHTML = w.value;
+
+
+v.oninput = function() {
+  v_output.innerHTML = v.value;
+  var xhttp = new XMLHttpRequest();
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+    }
+  };
+
+  var url = "http://0.0.0.0:5000/read_vel?linear="+v.value+"&angular="+w.value;
+  xhttp.open("GET", url, true);
+  xhttp.send();
+};
+w.oninput = function() {
+  w_output.innerHTML = w.value;
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+    }
+  };
+
+  var url = "http://0.0.0.0:5000/read_vel?linear="+v.value+"&angular="+w.value;
+  xhttp.open("GET", url, true);
+  xhttp.send();
+};
+
+stop_button.onclick = function() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+    }
+  };
+
+  var url = "http://0.0.0.0:5000/stop";
+  xhttp.open("GET", url, true);
+  xhttp.send();
+};
+</script>
+
+</body>
+</html>
