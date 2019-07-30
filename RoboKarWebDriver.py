@@ -23,7 +23,7 @@ class Driver(object):
 
 #initialises robot and Driver
     def __init__(self,robot,args):
-        logging.basicConfig(level=logging.DEBUG)
+        #logging.basicConfig(level=logging.DEBUG)
         self.robot = robot
         self.args = args
         self._lock=threading.RLock()
@@ -45,7 +45,7 @@ class Driver(object):
             w = float(request.args.get("angular"))
         except:
             return "Bad Input"
-            logging.info('Bad v,w input')
+            print('Bad v,w input')
         else:
             print('commanded velocities',[v,w])
             if self.args.testing != 'True':
@@ -85,17 +85,10 @@ def main():
     @atexit.register
     def cleanup_robot():
         if args.testing != 'True':
+            print('EXITING')
             PiOde.stop()
             GPIO.cleanup()
         pass
-
-    def signal_handler(signum, frame):
-            print('You pressed Ctrl+C!')
-            if args.testing != 'True':
-                GPIO.cleanup()
-            sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
 
     if args.testing != 'True':
         # Rpi Sepcific Commands - if not testing
@@ -119,7 +112,7 @@ def main():
 
         #set up robot
         PiOde = robots.RobotOne(Motors,Sensors)
-        PiOde.test()
+        #PiOde.test()
 
         #Buttons
         button_pin = params['button_pin']
@@ -128,8 +121,9 @@ def main():
         #set up button handling
         GPIO.add_event_detect(button_pin, GPIO.RISING, bouncetime = 200)
         GPIO.add_event_callback(button_pin, PiOde.toggle_roaming)
+        print('PiOde Set Up Complete')
     else:
-        PiOde = 1
+        PiOde = None
 
     # driver instance
     d = Driver(PiOde,args)
@@ -147,7 +141,7 @@ def main():
     app.route("/stop_robot")(d.stop)
     app.route("/stop")(d.stop)
 
-    app.run(host= args.hostname,port=args.port, debug=True)
+    app.run(host= args.hostname,port=args.port, debug=False)
 
 if __name__=="__main__":
         main()
