@@ -15,24 +15,34 @@ from sys import argv
 from flask import Flask
 from flask import request
 import atexit
+from werkzeug.serving import make_server
 
+class ServerThread(threading.Thread):
+#Flask Server Thread designed for clean exit
+    def __init__(self, app, args):
+        threading.Thread.__init__(self)
+        self.srv = make_server(args.hostname, args.port, app)
+        self.ctx = app.app_context()
+        self.ctx.push()
 
+    def run(self):
+        self.srv.serve_forever()
 
+    def shutdown(self):
+        self.srv.shutdown()
 
 class Driver(object):
-
 #initialises robot and Driver
     def __init__(self,robot,args):
         #logging.basicConfig(level=logging.DEBUG)
         self.robot = robot
         self.args = args
-        self._lock=threading.RLock()
         pass
 
     #@app.route("/")
     def web_interface(self):
         # html file is in RoboKar.html
-        html = open("RoboKar.html")
+        html = open("RoboKar1.html")
         response = html.read().replace('\n', '')
         html.close()
         return response
@@ -56,9 +66,8 @@ class Driver(object):
     #reads sensors
     def sense(self):
         while True:
-            with self._lock:
-                if self.args.testing != 'True':
-                    self.robot.sense()
+            if self.args.testing != 'True':
+                self.robot.sense()
             time.sleep(1)
             if self.args.testing != 'True':
                 print ('sensor values are: ', self.robot.readings)
@@ -91,6 +100,7 @@ def main():
             print('EXITING')
             PiOde.stop()
             GPIO.cleanup()
+            server.shutdown()
         pass
 
     if args.testing != 'True':
@@ -136,15 +146,18 @@ def main():
 
     #start the flask server
     app = Flask(__name__)
+
     #app.add_url_rule('/','web_interface',d.web_interface)
     #app.add_url_rule('/read_vel','read_vel',d.read_vel)
 
     app.route("/")(d.web_interface)
     app.route("/read_vel")(d.read_vel)
     app.route("/stop")(d.stop)
-    #app.route("/exit")(lambda:sys.exit(0))
+    app.route("/exit")(lambda:sys.exit(0))
+    server = ServerThread(app,args)
+    server.start()
 
-    app.run(host= args.hostname,port=args.port, debug=False)
+    #app.run(host= args.hostname,port=args.port, debug=False)
 
 if __name__=="__main__":
         main()

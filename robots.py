@@ -43,6 +43,7 @@ class robot(object):
   #motion methods
   def stop(self):
     for m in self.motors:
+      print('stopping')
       m.brake()
       m.stop()
       self.stopped = True
