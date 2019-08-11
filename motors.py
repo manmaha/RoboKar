@@ -75,10 +75,13 @@ class motor(object):
 
   def stop(self):
   # stops the motor
-    GPIO.output(self.In1,GPIO.LOW)
-    GPIO.output(self.In2,GPIO.HIGH)
-    self.PWM.start(self.params['MAXGAIN']) #duty cycle Max
+
+    #GPIO.output(self.In1,GPIO.LOW)
+    #GPIO.output(self.In2,GPIO.HIGH)
+    #self.PWM.start(self.params['MAXGAIN']) #duty cycle Max
     #self.standby(False)
+    self.PWM.stop
+    GPIO.output([self.In1,self.In2],GPIO.HIGH)
     pass
 
 
@@ -99,6 +102,7 @@ def main():
       parser.add_argument('--motor', default='both')
       parser.add_argument('--gain', default=100)
       parser.add_argument('--testing',default=False)
+      parser.add_argument('--time', default=10)
       args = parser.parse_args()
 
       # Cleanup done at exit
@@ -124,6 +128,10 @@ def main():
               l.forward(float(args.gain))
           else:
               r.forward(float(args.gain))
+
+      time.sleep(float(args.time))
+      for m in (lr,r): m.brake()
+      GPIO.cleanup()	
 
 
 

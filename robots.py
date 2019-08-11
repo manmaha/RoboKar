@@ -11,7 +11,10 @@ from yaml import load, Loader
 import signal
 import sys
 import threading
-from sys import argv
+import argparse
+import atexit
+
+
 
 
 # Robot is an object comprising of a list of sensors and actuators
@@ -43,9 +46,7 @@ class robot(object):
   #motion methods
   def stop(self):
     for m in self.motors:
-      print('stopping')
       m.brake()
-      m.stop()
       self.stopped = True
 
   #forward/backward motion
@@ -92,8 +93,8 @@ class RobotOne(robot): # simple 2 wheeled robot
     self.params = load(open('params.yaml').read(), Loader=Loader)
 
     #Calculate Max Left and Right motor speeds
-    U_l_max = self.params['MAXGAIN']/self.params['left_ratio']
-    U_r_max = self.params['MAXGAIN']/self.params['right_ratio']
+    U_l_max = self.params['MAXGAIN']/self.params['gain_ratio']
+    U_r_max = self.params['MAXGAIN']/self.params['gain_ratio']
     self.lin_vel_max = self.params['R']*(U_l_max+U_r_max)/2*100
     self.ang_vel_max = self.params['R']/self.params['L']*(U_l_max+U_r_max)
     #print self.lin_vel_max
@@ -111,15 +112,15 @@ class RobotOne(robot): # simple 2 wheeled robot
    ang_vel = np.sign(w)*min(self.ang_vel_max,abs(w))
 
    #unicycle Model
-   left_gain = self.params['left_ratio']*(lin_vel-ang_vel*self.params['L']/2)/self.params['R']/self.params['calib_factor']
+   left_gain = self.params['gain_ratio']*(lin_vel-ang_vel*self.params['L']/1.2)/self.params['R']
    left_gain=min(left_gain,self.params['MAXGAIN'])
    left_direction = left_gain > 0
-   right_gain = self.params['right_ratio']*(lin_vel+ang_vel*self.params['L']/2)/self.params['R']/self.params['calib_factor']
+   right_gain = self.params['gain_ratio']*(lin_vel+ang_vel*self.params['L']/6.0)/self.params['R']
    right_gain=min(right_gain,self.params['MAXGAIN'])
 
    print('left_gain',left_gain,'right_gain',right_gain )
    #input('take a pause')
-
+   left_direction = left_gain > 0
    right_direction = right_gain > 0
    #move command
    self.leftMotor.move(abs(left_gain),left_direction)
@@ -241,7 +242,13 @@ def button_handler(pin):
 
 def main():
     #test and run the the Robot
-    #motor GPIO Pins
+
+    parser = argparse.ArgumentParser(description='Driver for RoboKar')
+    parser.add_argument('--v', default=1.0)
+    parser.add_argument('--w', default=0)
+    parser.add_argument('--testing',default=False)
+    parser.add_argument('--time', default=10)
+    args = parser.parse_args()
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     StdByPin = 22  # this is the common pin
@@ -249,6 +256,15 @@ def main():
     rightMotorPins = [13,25,5] # same as above
     leftMotorPins.append(StdByPin)
     rightMotorPins.append(StdByPin)
+
+      # Cleanup done at exit
+    @atexit.register
+    def cleanup_robot():
+        if args.testing != 'True':
+          print('EXITING')
+          PiOde.stop()
+          GPIO.cleanup()
+          pass
 
     #Sensor GPIO Pins
     trig = 19    # common trig pin
@@ -280,9 +296,8 @@ def main():
     #PiOde.set_roaming_on()
     #while PiOde.is_roaming():
     #    PiOde.roam()
-    PiOde.command_vel([0,3.14])
-
-
+    PiOde.command_vel([float(args.v),float(args.w)])
+    time.sleep(float(args.time))
 
 if __name__ == "__main__":
     main()
