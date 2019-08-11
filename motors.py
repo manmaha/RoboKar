@@ -5,7 +5,8 @@
 
 import RPi.GPIO as GPIO
 import time
-from sys import argv
+import argparse
+import atexit
 
 # Motor is an object, setup defined as list of gpiopins and motor_type (A or B)
 # TB6612FNG Motor Driver controls two motors, Motor A and Motor B
@@ -54,7 +55,7 @@ class motor(object):
   #moves the motor forward
     self.standby()
     self.PWM.start(gain) #duty cycle = gain
-    print('moving forward - direction:',direction)
+    print('moving forward - direction:',direction,' gain: ', gain)
     GPIO.output((self.In1,self.In2),(direction,not direction))
     pass
 
@@ -76,8 +77,8 @@ class motor(object):
   # stops the motor
     GPIO.output(self.In1,GPIO.LOW)
     GPIO.output(self.In2,GPIO.HIGH)
-    self.PWM.start(self.params['MAX_DC']) #duty cycle Max
-    self.standby(False)
+    self.PWM.start(self.params['MAXGAIN']) #duty cycle Max
+    #self.standby(False)
     pass
 
 
@@ -94,30 +95,37 @@ def timed_move(motorList,gain,direction,runTime):
   pass
 
 def main():
+      parser = argparse.ArgumentParser(description='Motor Driver for RoboKar')
+      parser.add_argument('--motor', default='both')
+      parser.add_argument('--gain', default=100)
+      parser.add_argument('--testing',default=False)
+      args = parser.parse_args()
 
-  GPIO.setmode(GPIO.BCM)
-  StdByPin = 22  # this is the common pin
-  leftMotorPins = [12,23,24] # fill up with GPIO pins, PWMA, AIn1, AIn2
-  rightMotorPins = [13,25,5] # same as above
-  leftMotorPins.append(StdByPin)
-  rightMotorPins.append(StdByPin)
-  l = motor(leftMotorPins)
-  r = motor(rightMotorPins)
-  gain = l.params['MAXGAIN']*0.5
-  l.back(gain)
-  time.sleep(3)
-  print('left moved forward')
-  l.stop()
-  r.back(gain)
-  time.sleep(1)
-  r.stop()
-  time.sleep(3)
-  print('right moved forward')
+      # Cleanup done at exit
+#      @atexit.register
+#      def cleanup_robot():
+#          if args.testing != 'True':
+#              print('EXITING')
+#              for m in (l,r): m.stop()
+#              GPIO.cleanup()
+#              pass
 
-  for m in (l,r): m.forward(gain)
-  time.sleep(2)
-  for m in (l,r): m.stop()
-  GPIO.cleanup()
+      StdByPin = 22  # this is the common pin
+      leftMotorPins = [12,23,24] # fill up with GPIO pins, PWMA, AIn1, AIn2
+      rightMotorPins = [13,25,5] # same as above
+      leftMotorPins.append(StdByPin)
+      rightMotorPins.append(StdByPin)
+      l = motor(leftMotorPins)
+      r = motor(rightMotorPins)
+      if args.motor == 'both':
+          for m in (l,r):m.forward(float(args.gain))
+      else:
+          if args.motor == 'left':
+              l.forward(float(args.gain))
+          else:
+              r.forward(float(args.gain))
+
+
 
 
 if __name__ == "__main__":
