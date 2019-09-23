@@ -95,7 +95,7 @@ class RobotOne(robot): # simple 2 wheeled robot
     #Calculate Max Left and Right motor speeds
     U_l_max = self.params['MAXGAIN']/self.params['gain_ratio']
     U_r_max = self.params['MAXGAIN']/self.params['gain_ratio']
-    self.lin_vel_max = self.params['R']*(U_l_max+U_r_max)/2*100
+    self.lin_vel_max = self.params['R']*(U_l_max+U_r_max)/2
     self.ang_vel_max = self.params['R']/self.params['L']*(U_l_max+U_r_max)
     #print self.lin_vel_max
     #print self.ang_vel_max
@@ -110,21 +110,32 @@ class RobotOne(robot): # simple 2 wheeled robot
    #constrain velocities and convert to m/s
    lin_vel = np.sign(v)*min(self.lin_vel_max,abs(v/100.0))
    ang_vel = np.sign(w)*min(self.ang_vel_max,abs(w))
+   print(lin_vel, ang_vel)
 
    #unicycle Model
    left_gain = self.params['gain_ratio']*(lin_vel-ang_vel*self.params['L']/1.2)/self.params['R']
-   left_gain=min(left_gain,self.params['MAXGAIN'])
-   left_direction = left_gain > 0
    right_gain = self.params['gain_ratio']*(lin_vel+ang_vel*self.params['L']/6.0)/self.params['R']
-   right_gain=min(right_gain,self.params['MAXGAIN'])
+   print('left_gain',left_gain,'right_gain',right_gain )
+   left_direction = left_gain > 0
+   right_direction = right_gain > 0
+   #Get rid of signs to make processing easier
+   left_gain,right_gain = (abs(left_gain), abs(right_gain))
+   l_r_gain_ratio = left_gain/right_gain
+   if left_gain >= right_gain:
+       if left_gain > self.params['MAXGAIN']:
+           left_gain = self.params['MAXGAIN']
+           right_gain = left_gain / l_r_gain_ratio
+   if left_gain < right_gain:
+        if right_gain > self.params['MAXGAIN']:
+            right_gain = self.params['MAXGAIN']
+            left_gain = right_gain * l_r_gain_ratio
 
    print('left_gain',left_gain,'right_gain',right_gain )
    #input('take a pause')
-   left_direction = left_gain > 0
-   right_direction = right_gain > 0
+
    #move command
-   self.leftMotor.move(abs(left_gain),left_direction)
-   self.rightMotor.move(abs(right_gain),right_direction)
+   self.leftMotor.move(left_gain,left_direction)
+   self.rightMotor.move(right_gain,right_direction)
 
    pass
 

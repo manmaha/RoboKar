@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
 # Robot Set Up and Driver Routines
 # For  Commands (v,W) recd through a PS3 Controller
 # Manish Mahajan
@@ -29,10 +28,13 @@ def ps3drive(robot):
                     print('Found a joystick and connected')
                     while joystick.connected:
                         # Get a corrected value for the left stick x-axis
-                        w = joystick['lx']*robot.params['angular_vel_controller_calib']
-                        v = joystick.ly*robot.params['linear_vel_controller_calib']
-                        self.command_vel([v,w])
+                        # This does not really work! PS3 contraller gives erratic values - not sure of the range
+                        print('linear : ', joystick.ly, ' angular ' , joystick.lx)
+                        w = (2*joystick.lx +1)*robot.params['max_omega']
+                        v = (2*joystick.ly/100 -1)*robot.params['max_vel']
+                        #robot.command_vel([v,w])
                         print (v,w)
+                        time.sleep(1)
                 # Joystick disconnected...
                 print('Connection to joystick lost')
             except IOError:
@@ -67,7 +69,7 @@ def main():
 
     #set up robot
     PiOde = robots.RobotOne(Motors,Sensors)
-    PiOde.test()
+    #PiOde.test()
 
     #Buttons
     button_pin = params['button_pin']
